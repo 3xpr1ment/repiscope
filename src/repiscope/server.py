@@ -15,6 +15,7 @@ from mcp.server.fastmcp import FastMCP
 
 from repiscope.overview import get_overview
 from repiscope.scanner import find_projects, one_line_description
+from repiscope.textsearch import MAX_HITS_TOTAL, search_project
 
 mcp = FastMCP("repiscope")
 
@@ -58,8 +59,30 @@ def project_overview(project: str) -> str:
 
 @mcp.tool()
 def search(query: str, project: str | None = None) -> str:
-    """Search inside the code of sibling repos. Returns matching files and lines."""
-    return "TODO: not implemented yet"
+    """Search inside the code of sibling repos. Returns matching files and lines.
+
+    Case-insensitive text match. Give `project` to search one repo,
+    omit it to search them all.
+    """
+    if project is not None:
+        folder = _resolve(project)
+        if folder is None:
+            return f"Unknown project '{project}'. Call list_projects() to see valid names."
+        targets = [folder]
+    else:
+        targets = find_projects(ROOT, EXCLUDE)
+
+    hits: list[str] = []
+    for target in targets:
+        hits.extend(search_project(target, query, MAX_HITS_TOTAL - len(hits)))
+        if len(hits) >= MAX_HITS_TOTAL:
+            break
+
+    if not hits:
+        where = f"in {project}" if project else f"across {len(targets)} projects"
+        return f"No matches for '{query}' {where}."
+    capped = " (result limit reached — narrow the query or pass a project)" if len(hits) >= MAX_HITS_TOTAL else ""
+    return f"{len(hits)} match(es) for '{query}'{capped}:\n\n" + "\n".join(hits)
 
 
 @mcp.tool()
