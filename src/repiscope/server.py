@@ -13,6 +13,7 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
+from repiscope.overview import get_overview
 from repiscope.scanner import find_projects, one_line_description
 
 mcp = FastMCP("repiscope")
@@ -34,10 +35,25 @@ def list_projects() -> str:
     return "\n".join(lines)
 
 
+def _resolve(project: str) -> Path | None:
+    """Map a project name to its folder — only names list_projects() would show.
+
+    This is the security gate: excluded repos and path tricks ('../secrets')
+    can never resolve, because we only compare against the scanned list.
+    """
+    for p in find_projects(ROOT, EXCLUDE):
+        if p.name == project:
+            return p
+    return None
+
+
 @mcp.tool()
 def project_overview(project: str) -> str:
     """Return the full overview of one repo: purpose, stack, structure, recent commits."""
-    return "TODO: not implemented yet"
+    folder = _resolve(project)
+    if folder is None:
+        return f"Unknown project '{project}'. Call list_projects() to see valid names."
+    return get_overview(folder)
 
 
 @mcp.tool()
