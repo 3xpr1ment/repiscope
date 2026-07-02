@@ -13,6 +13,8 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
+from repiscope.privacy import is_sensitive
+
 from repiscope.overview import get_overview
 from repiscope.scanner import find_projects, one_line_description
 from repiscope.textsearch import MAX_HITS_TOTAL, search_project
@@ -85,10 +87,34 @@ def search(query: str, project: str | None = None) -> str:
     return f"{len(hits)} match(es) for '{query}'{capped}:\n\n" + "\n".join(hits)
 
 
+MAX_READ_BYTES = 200_000
+
+
 @mcp.tool()
 def read_file(project: str, path: str) -> str:
     """Return the full contents of one file from a sibling repo (read-only, size-capped)."""
-    return "TODO: not implemented yet"
+    folder = _resolve(project)
+    if folder is None:
+        return f"Unknown project '{project}'. Call list_projects() to see valid names."
+
+    target = (folder / path).resolve()
+    if not target.is_relative_to(folder.resolve()):
+        return f"Refused: '{path}' points outside {project}."
+    if is_sensitive(target) or any(is_sensitive(Path(p)) for p in target.parts):
+        return f"Refused: '{path}' matches the sensitive-file filter."
+    if not target.is_file():
+        return f"No such file in {project}: '{path}'. Use search() or project_overview() to find files."
+
+    try:
+        raw = target.read_bytes()
+    except OSError as e:
+        return f"Could not read '{path}': {e.strerror}"
+    if b"\x00" in raw[:1024]:
+        return f"Refused: '{path}' is a binary file."
+    truncated = len(raw) > MAX_READ_BYTES
+    text = raw[:MAX_READ_BYTES].decode("utf-8", errors="replace")
+    note = f"\n\n[… truncated at {MAX_READ_BYTES} bytes — file is {len(raw)} bytes]" if truncated else ""
+    return f"── {project}/{path} ──\n{text}{note}"
 
 
 def main() -> None:
