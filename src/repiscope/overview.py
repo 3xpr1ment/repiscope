@@ -12,6 +12,8 @@ import subprocess
 from collections import Counter
 from pathlib import Path
 
+from repiscope.privacy import is_sensitive
+
 CACHE_DIR = Path.home() / ".cache" / "repiscope"
 
 # Folders that would pollute the structure view / language stats.
@@ -35,9 +37,33 @@ def _git(project: Path, *args: str) -> str:
         return ""
 
 
+def git_repos_of(project: Path) -> list[Path]:
+    """The git repo(s) backing a project folder.
+
+    Real-world layouts differ: the project folder may be the repo itself,
+    or a workspace whose actual repo(s) live one level deeper (e.g.
+    Ordifact/app). We check the folder first, then its direct children.
+    """
+    if (project / ".git").exists():
+        return [project]
+    repos = []
+    for child in sorted(project.iterdir()):
+        if child.is_dir() and not child.name.startswith(".") and (child / ".git").exists():
+            repos.append(child)
+    return repos
+
+
 def fingerprint(project: Path) -> str:
-    """Current identity of the repo: its HEAD commit hash ('' if no git)."""
-    return _git(project, "rev-parse", "HEAD")
+    """Current identity of the project: combined HEAD hashes of its repo(s).
+
+    '' when no git anywhere — such projects are rebuilt on every call.
+    """
+    parts = []
+    for repo in git_repos_of(project):
+        h = _git(repo, "rev-parse", "HEAD")
+        if h:
+            parts.append(f"{repo.name}:{h}")
+    return ";".join(parts)
 
 
 def cache_path(project: Path) -> Path:
@@ -76,9 +102,11 @@ def build_overview(project: Path) -> str:
 
     sections.append("## Structure\n```\n" + _tree(project) + "\n```")
 
-    commits = _git(project, "log", "-8", "--oneline", "--no-decorate")
-    if commits:
-        sections.append("## Recent commits\n```\n" + commits + "\n```")
+    for repo in git_repos_of(project):
+        commits = _git(repo, "log", "-8", "--oneline", "--no-decorate")
+        if commits:
+            label = "" if repo == project else f" ({repo.name}/)"
+            sections.append(f"## Recent commits{label}\n```\n" + commits + "\n```")
 
     return "\n\n".join(sections) + "\n"
 
@@ -98,7 +126,7 @@ def _iter_files(project: Path):
     for path in project.rglob("*"):
         if any(part in NOISE_DIRS or part.startswith(".") for part in path.parts[len(project.parts):]):
             continue
-        if path.is_file():
+        if path.is_file() and not is_sensitive(path):
             yield path
 
 
@@ -115,12 +143,12 @@ def _tree(project: Path, max_entries: int = 40) -> str:
     lines = []
     for entry in sorted(project.iterdir()):
         name = entry.name
-        if name.startswith(".") or name in NOISE_DIRS:
+        if name.startswith(".") or name in NOISE_DIRS or is_sensitive(entry):
             continue
         if entry.is_dir():
             lines.append(f"{name}/")
             for sub in sorted(entry.iterdir())[:6]:
-                if sub.name.startswith(".") or sub.name in NOISE_DIRS:
+                if sub.name.startswith(".") or sub.name in NOISE_DIRS or is_sensitive(sub):
                     continue
                 lines.append(f"  {sub.name}{'/' if sub.is_dir() else ''}")
         else:

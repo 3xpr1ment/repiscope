@@ -30,6 +30,23 @@ compares the repo's current git commit hash against the one recorded when the
 overview was built. Same hash → serve the cache. Different → rebuild just that
 repo's overview. No cron, no daemons.
 
+## Security by architecture
+
+Repiscope is built so that the safe behaviour is not a promise — it's the
+only behaviour possible:
+
+- **Zero write tools.** The server exposes no tool that creates, edits or
+  deletes anything. An agent cannot misuse a capability that doesn't exist.
+- **Secrets are invisible.** A single filter (`privacy.py`) is enforced by
+  every tool: private keys, certificates (`.pem`, `.pfx`, `.p12`, …),
+  `.env*` files, keystores, and anything named like a credential never
+  appear in overviews, trees, search results or file reads.
+- **You define the perimeter.** Repiscope only sees the folder you
+  explicitly pass (`--root`), and `--exclude` makes chosen repos fully
+  invisible — they can't even be resolved by name.
+- **It leaves no trace.** Overview caches live in `~/.cache/repiscope`,
+  never inside your repositories.
+
 ## Status
 
 🚧 Under construction — v1 in progress.
