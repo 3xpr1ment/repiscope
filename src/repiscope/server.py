@@ -1,7 +1,9 @@
 """Repiscope MCP server.
 
-Exposes exactly four read-only tools. There are — deliberately — no tools
-that write, so a connected agent structurally cannot modify sibling repos.
+Exposes four read-only tools plus store_summary, whose only writable target
+is Repiscope's own cache (~/.cache/repiscope). There is — deliberately — no
+tool that can touch the repos themselves, so a connected agent structurally
+cannot modify them.
 
 The folder to scan is given explicitly by the user (--root or REPISCOPE_ROOT);
 repos listed in --exclude are invisible to every tool.
@@ -15,7 +17,7 @@ from mcp.server.fastmcp import FastMCP
 
 from repiscope.privacy import is_sensitive
 
-from repiscope.overview import get_overview
+from repiscope.overview import SUMMARY_MAX_CHARS, get_overview, save_summary
 from repiscope.scanner import find_projects, one_line_description
 from repiscope.textsearch import MAX_HITS_TOTAL, search_project
 
@@ -57,6 +59,29 @@ def project_overview(project: str) -> str:
     if folder is None:
         return f"Unknown project '{project}'. Call list_projects() to see valid names."
     return get_overview(folder)
+
+
+@mcp.tool()
+def store_summary(project: str, summary: str) -> str:
+    """Store your written summary of a project, shown in every future overview.
+
+    Overviews without a fresh summary end with a note asking you to write one:
+    a few paragraphs on what the project is, does, and how it's built. Cached
+    until the repo's next commit. This tool can only write to Repiscope's own
+    cache — never inside the repos.
+    """
+    folder = _resolve(project)
+    if folder is None:
+        return f"Unknown project '{project}'. Call list_projects() to see valid names."
+    summary = summary.strip()
+    if not summary:
+        return "Refused: the summary is empty."
+    if len(summary) > SUMMARY_MAX_CHARS:
+        return (f"Refused: {len(summary)} chars is over the {SUMMARY_MAX_CHARS} limit — "
+                "a summary should be a distillation, not a second overview.")
+    save_summary(folder, summary)
+    return (f"Stored. project_overview('{project}') now opens with your summary, "
+            "until the repo's next commit.")
 
 
 @mcp.tool()

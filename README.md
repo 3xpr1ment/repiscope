@@ -22,6 +22,7 @@ tools, so the agent structurally *cannot* modify your other repos.
 | `project_overview(project)` | repo name | full overview: purpose, stack, structure, recent commits |
 | `search(query, project?)` | text, optional repo | files & lines matching the query |
 | `read_file(project, path)` | repo + file path | full file contents (size-capped) |
+| `store_summary(project, summary)` | repo + your text | caches an agent-written summary (see below) |
 
 ## How it stays fresh
 
@@ -30,13 +31,25 @@ compares the repo's current git commit hash against the one recorded when the
 overview was built. Same hash → serve the cache. Different → rebuild just that
 repo's overview. No cron, no daemons.
 
+## Borrowed intelligence
+
+Repiscope has no LLM of its own — no API key, no model calls, zero cost. But
+it talks to LLMs all day, so it borrows them: when an overview has no fresh
+agent-written summary, it ends with a note asking the *calling* agent to
+write one and hand it back via `store_summary`. The summary then opens every
+future overview of that project — written by one agent, read by all the
+next — until the repo's next commit marks it outdated and the cycle repeats.
+
 ## Security by architecture
 
 Repiscope is built so that the safe behaviour is not a promise — it's the
 only behaviour possible:
 
-- **Zero write tools.** The server exposes no tool that creates, edits or
-  deletes anything. An agent cannot misuse a capability that doesn't exist.
+- **Zero repo-write tools.** The server exposes no tool that can create,
+  edit or delete anything inside your repositories. The one tool that
+  accepts data, `store_summary`, can only write to Repiscope's own cache in
+  `~/.cache/repiscope`. An agent cannot misuse a capability that doesn't
+  exist.
 - **Secrets are invisible.** A single filter (`privacy.py`) is enforced by
   every tool: private keys, certificates (`.pem`, `.pfx`, `.p12`, …),
   `.env*` files, keystores, and anything named like a credential never
@@ -68,8 +81,9 @@ Optionally hide repos with `--exclude repo-a --exclude repo-b`.
 
 ## Status
 
-v1 — working and dogfooded daily. Four read-only tools, lazy cache refresh,
-sensitive-file filtering. No tests yet; API may still change.
+v1.5 — working and dogfooded daily. Four read-only tools plus borrowed-LLM
+summaries, lazy cache refresh, sensitive-file filtering. No tests yet; API
+may still change.
 
 ## License
 

@@ -6,6 +6,12 @@ the scanned repos — Repiscope leaves the sibling folders untouched, always.
 Freshness (lazy refresh): every overview records the repo's git commit hash
 at build time. On each request we re-read the current hash; same hash →
 serve the cache, different (or repo has no git) → rebuild just this one.
+
+Borrowed-LLM summaries: Repiscope has no LLM of its own. When an overview
+has no fresh agent-written summary, it ends with a note asking the *calling*
+agent to write one and hand it back via the store_summary tool. The summary
+is cached next to the overview and served to every future agent until the
+repo's next commit.
 """
 
 import subprocess
@@ -70,6 +76,47 @@ def cache_path(project: Path) -> Path:
     return CACHE_DIR / f"{project.name}.md"
 
 
+def summary_path(project: Path) -> Path:
+    return CACHE_DIR / f"{project.name}.summary.md"
+
+
+SUMMARY_MAX_CHARS = 4000
+
+# Appended to an overview whenever it lacks a fresh agent-written summary.
+BORROW_NOTE = """## Note to the reading agent
+
+Everything above was assembled mechanically — Repiscope has no LLM of its
+own, so it borrows yours. If you now understand this project, leave the next
+agent something better: write a short summary (what it is, what it does, how
+it is put together; under {max_chars} chars) and call
+`store_summary(project="{name}", summary=...)`. It will open every future
+overview of this project until its next commit."""
+
+
+def _read_summary(project: Path) -> tuple[str, str]:
+    """(fingerprint-at-write-time, text) of the stored summary; ('', '') if none."""
+    f = summary_path(project)
+    if not f.is_file():
+        return "", ""
+    text = f.read_text(encoding="utf-8")
+    first, _, rest = text.partition("\n")
+    if first.startswith("<!-- fingerprint: ") and first.endswith(" -->"):
+        return first[len("<!-- fingerprint: "):-len(" -->")], rest.strip()
+    return "", text.strip()
+
+
+def save_summary(project: Path, summary: str) -> None:
+    """Store an agent-written summary, stamped with the repo's current identity.
+
+    Drops the cached overview so the next call rebuilds it with the summary in.
+    """
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    summary_path(project).write_text(
+        f"<!-- fingerprint: {fingerprint(project)} -->\n{summary.strip()}\n",
+        encoding="utf-8")
+    cache_path(project).unlink(missing_ok=True)
+
+
 def get_overview(project: Path) -> str:
     """Serve the cached overview if still fresh, else rebuild it (lazy refresh)."""
     current = fingerprint(project)
@@ -81,16 +128,23 @@ def get_overview(project: Path) -> str:
         if first_line == f"<!-- fingerprint: {current} -->":
             return text
 
-    text = f"<!-- fingerprint: {current} -->\n" + build_overview(project)
+    text = f"<!-- fingerprint: {current} -->\n" + build_overview(project, current)
     if current:  # repos without git are rebuilt every time, nothing to cache against
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
         cached.write_text(text, encoding="utf-8")
     return text
 
 
-def build_overview(project: Path) -> str:
+def build_overview(project: Path, current_fingerprint: str) -> str:
     """Assemble the overview page from cheap, mechanical sources."""
     sections = [f"# {project.name}"]
+
+    summary_fp, summary = _read_summary(project)
+    summary_fresh = bool(summary) and summary_fp == current_fingerprint
+    if summary:
+        stale_note = "" if summary_fresh else \
+            "\n\n*(written before the latest commits — may be outdated)*"
+        sections.append("## Summary (agent-written)\n" + summary + stale_note)
 
     readme = _readme_excerpt(project)
     if readme:
@@ -107,6 +161,10 @@ def build_overview(project: Path) -> str:
         if commits:
             label = "" if repo == project else f" ({repo.name}/)"
             sections.append(f"## Recent commits{label}\n```\n" + commits + "\n```")
+
+    if not summary_fresh:
+        sections.append(BORROW_NOTE.format(name=project.name,
+                                           max_chars=SUMMARY_MAX_CHARS))
 
     return "\n\n".join(sections) + "\n"
 

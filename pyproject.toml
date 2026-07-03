@@ -1,6 +1,6 @@
 [project]
 name = "repiscope"
-version = "0.1.0"
+version = "0.2.0"
 description = "A periscope for your repos - read-only MCP server for sibling repository context"
 requires-python = ">=3.11"
 dependencies = [
