@@ -41,12 +41,36 @@ only behaviour possible:
   every tool: private keys, certificates (`.pem`, `.pfx`, `.p12`, …),
   `.env*` files, keystores, and anything named like a credential never
   appear in overviews, trees, search results or file reads.
+  *Honest limit:* the filter hides sensitive **files** — it does not scrub
+  mentions of e.g. a password pasted inside an ordinary text file.
 - **You define the perimeter.** Repiscope only sees the folder you
   explicitly pass (`--root`), and `--exclude` makes chosen repos fully
   invisible — they can't even be resolved by name.
 - **It leaves no trace.** Overview caches live in `~/.cache/repiscope`,
   never inside your repositories.
 
+## Quick start
+
+```bash
+git clone https://github.com/3xpr1ment/repiscope.git
+cd repiscope
+python -m venv .venv && .venv/bin/pip install -e .
+```
+
+Register it with your MCP client — for Claude Code:
+
+```bash
+claude mcp add repiscope --scope user -- \
+  /path/to/repiscope/.venv/bin/repiscope --root ~/your/projects/folder
+```
+
+Optionally hide repos with `--exclude repo-a --exclude repo-b`.
+
 ## Status
 
-🚧 Under construction — v1 in progress.
+v1 — working and dogfooded daily. Four read-only tools, lazy cache refresh,
+sensitive-file filtering. No tests yet; API may still change.
+
+## License
+
+[MIT](LICENSE)
