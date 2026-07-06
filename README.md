@@ -14,6 +14,28 @@ it might start editing files there. Telling it "don't touch anything" is a
 request. Repiscope makes it a **guarantee**: the server exposes zero write
 tools, so the agent structurally *cannot* modify your other repos.
 
+## See it in action
+
+You're working in `project-a` and your agent needs to know how you handled
+auth in another project. Instead of you copy-pasting files, the agent asks
+Repiscope directly:
+
+```
+You:    How did I do JWT refresh in my other API project?
+
+Agent:  (calls list_projects → sees "billing-api")
+        (calls search "refresh_token" project="billing-api")
+        (calls read_file "billing-api" "src/auth/tokens.py")
+
+        In billing-api you rotate the refresh token on every use and
+        store the previous hash for a 60s grace window — here's the
+        pattern, adapted for project-a:
+        ...
+```
+
+The agent read three files in a repo it has **no ability to write to**. No
+copy-paste, no "please don't edit anything," no risk.
+
 ## Tools
 
 | Tool | Input | Returns |
