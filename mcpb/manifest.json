@@ -1,0 +1,51 @@
+{
+  "manifest_version": "0.3",
+  "name": "repiscope",
+  "display_name": "Repiscope",
+  "version": "0.2.0",
+  "description": "A periscope for your repos — see everything, touch nothing. Read-only MCP access to sibling repositories.",
+  "long_description": "Repiscope lets a coding agent see your other repositories without any ability to modify them. It exposes zero repo-write tools, so the agent structurally cannot touch your code: it can list projects, get an overview, search text, and read files — nothing else. Sensitive files (keys, certs, .env, credentials) are filtered out of every tool.",
+  "author": {
+    "name": "3xpr1ment"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/3xpr1ment/repiscope"
+  },
+  "homepage": "https://github.com/3xpr1ment/repiscope",
+  "license": "MIT",
+  "keywords": ["repositories", "read-only", "context", "codebase", "periscope"],
+  "server": {
+    "type": "python",
+    "entry_point": "server/main.py",
+    "mcp_config": {
+      "command": "python3",
+      "args": ["${__dirname}/server/main.py"],
+      "env": {
+        "REPISCOPE_ROOT": "${user_config.root}"
+      }
+    }
+  },
+  "tools": [
+    { "name": "list_projects", "description": "List every repository visible under the configured root" },
+    { "name": "project_overview", "description": "Structured overview of one project (file map, languages, cached summary)" },
+    { "name": "search", "description": "Substring search across a project's text files" },
+    { "name": "read_file", "description": "Read one file (size-capped, traversal-guarded, secrets filtered)" },
+    { "name": "store_summary", "description": "Cache an agent-written summary of a project (writes only to Repiscope's own cache)" }
+  ],
+  "user_config": {
+    "root": {
+      "type": "directory",
+      "title": "Projects root folder",
+      "description": "The folder that contains the repositories Repiscope may read (e.g. ~/Documents/Projects). Repiscope can never write to them.",
+      "multiple": false,
+      "required": true
+    }
+  },
+  "compatibility": {
+    "platforms": ["darwin"],
+    "runtimes": {
+      "python": ">=3.11"
+    }
+  }
+}
