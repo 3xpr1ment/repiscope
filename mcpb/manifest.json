@@ -36,8 +36,8 @@
   "user_config": {
     "root": {
       "type": "directory",
-      "title": "Projects root folder",
-      "description": "The folder that contains the repositories Repiscope may read (e.g. ~/Documents/Projects). Repiscope can never write to them.",
+      "title": "Where are your projects?",
+      "description": "Pick the one folder that holds all your project folders (e.g. Documents/Projects) — not an individual repo. Use Browse to select it. Repiscope will be able to read every repo inside it, and can never write to any of them.",
       "multiple": false,
       "required": true
     }
