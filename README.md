@@ -8,11 +8,14 @@ one it's working in — without ever letting it modify them.
 
 ## Why
 
-When you run a coding agent inside project A, sometimes it needs to know how
-you solved something in project B. Opening project B to the agent is scary:
-it might start editing files there. Telling it "don't touch anything" is a
-request. Repiscope makes it a **guarantee**: the server exposes zero write
-tools, so the agent structurally *cannot* modify your other repos.
+I built a personal assistant to help me decide where my time goes: for that
+it needs to know the real state of every project — what changed, what
+stalled, what the next step is. So it has to *see* all my repos. But telling
+an agent "don't touch anything" is a request, not a guarantee. Repiscope
+makes it a **guarantee**: the server exposes zero write tools, so the agent
+structurally *cannot* modify your repos. And the same periscope helps any
+coding agent working in project A that needs to know how a part of
+project B works.
 
 ## See it in action
 
@@ -78,28 +81,61 @@ only behaviour possible:
   appear in overviews, trees, search results or file reads.
   *Honest limit:* the filter hides sensitive **files** — it does not scrub
   mentions of e.g. a password pasted inside an ordinary text file.
+- **Symlinks can't smuggle.** A cloned repo is untrusted content — it may
+  contain a symlink like `notes.txt → ~/.ssh/id_rsa`. Anything whose real
+  location falls outside the project is invisible to every tool, the secret
+  filter also checks a link's real target, and path traversal (`../`) is
+  refused.
 - **You define the perimeter.** Repiscope only sees the folder you
   explicitly pass (`--root`), and `--exclude` makes chosen repos fully
   invisible — they can't even be resolved by name.
 - **It leaves no trace.** Overview caches live in `~/.cache/repiscope`,
   never inside your repositories.
 
+Every claim above is enforced by the test suite in `tests/` — clone the
+repo and run `pytest` to check them yourself.
+
 ## Quick start
+
+```bash
+pip install repiscope
+claude mcp add repiscope --scope user -- repiscope --root ~/your/projects/folder
+```
+
+That's it — point `--root` at the folder *containing* your repos (not a repo
+itself). Optionally hide repos with `--exclude repo-a --exclude repo-b`.
+Works with any MCP client; for Claude Desktop there's also a one-click
+`.mcpb` bundle (build it with `mcpb/build.sh`).
+
+From source instead:
 
 ```bash
 git clone https://github.com/3xpr1ment/repiscope.git
 cd repiscope
-python -m venv .venv && .venv/bin/pip install -e .
+python -m venv .venv && .venv/bin/pip install -e .[dev]
+.venv/bin/pytest   # the security claims, as executable proof
 ```
 
-Register it with your MCP client — for Claude Code:
+## Limitations
 
-```bash
-claude mcp add repiscope --scope user -- \
-  /path/to/repiscope/.venv/bin/repiscope --root ~/your/projects/folder
-```
+Honesty section — what Repiscope deliberately does *not* do:
 
-Optionally hide repos with `--exclude repo-a --exclude repo-b`.
+- **The secret filter works at file level.** Sensitive *files* are
+  invisible, but a password pasted inside an ordinary `notes.md` will not
+  be scrubbed. The perimeter is yours: only point `--root` at folders you
+  are comfortable showing to your agent — whatever the tools can see, your
+  LLM provider will see too.
+- **Search is deliberately dumb.** Case-insensitive substring match, capped
+  results, no index, no regex. The calling LLM supplies the intelligence at
+  both ends; for heavy code search, use a real code-search tool.
+- **Overviews are mechanical.** Without an agent-written summary they are
+  README excerpts, language stats and git logs — useful, not insightful.
+  The insight arrives once your agents start leaving summaries behind.
+- **Read-only cuts both ways.** There is no refresh tool to call: caches
+  refresh lazily on the next commit, and stale summaries are served marked
+  as stale until an agent writes a new one.
+- **Python ≥ 3.11**, developed and tested on macOS; Linux should behave
+  identically, Windows symlink semantics are untested.
 
 ## Status
 
