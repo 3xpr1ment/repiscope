@@ -6,3 +6,4 @@ dist/
 .cache/
 mcpb/server/lib/
 .DS_Store
+.pytest_cache/

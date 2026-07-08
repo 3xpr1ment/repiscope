@@ -6,6 +6,8 @@ we never create or modify anything.
 
 from pathlib import Path
 
+from repiscope.privacy import is_off_limits
+
 
 def find_projects(root: Path, exclude: set[str]) -> list[Path]:
     """Return every direct subfolder of `root` that looks like a project.
@@ -32,7 +34,7 @@ def one_line_description(project: Path) -> str:
     """
     for name in ("README.md", "README.rst", "README.txt", "README"):
         readme = project / name
-        if readme.is_file():
+        if readme.is_file() and not is_off_limits(readme, project):
             try:
                 text = readme.read_text(encoding="utf-8", errors="replace")
             except OSError:

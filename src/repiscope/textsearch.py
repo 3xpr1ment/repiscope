@@ -11,7 +11,7 @@ sensitive files (privacy.py) are never even opened.
 from pathlib import Path
 
 from repiscope.overview import NOISE_DIRS
-from repiscope.privacy import is_sensitive
+from repiscope.privacy import is_off_limits
 
 MAX_FILE_BYTES = 1_000_000   # don't grep giant artifacts
 MAX_HITS_PER_FILE = 5
@@ -24,7 +24,7 @@ def _searchable_files(project: Path):
         rel_parts = path.parts[len(project.parts):]
         if any(part in NOISE_DIRS or part.startswith(".") for part in rel_parts):
             continue
-        if not path.is_file() or is_sensitive(path):
+        if not path.is_file() or is_off_limits(path, project):
             continue
         try:
             if path.stat().st_size > MAX_FILE_BYTES:

@@ -39,3 +39,24 @@ def is_sensitive(path: Path) -> bool:
     if name.startswith(SENSITIVE_PREFIXES):
         return True
     return any(word in name for word in SENSITIVE_KEYWORDS)
+
+
+def is_off_limits(path: Path, project: Path) -> bool:
+    """The full visibility gate: sensitive by name, escaping the project
+    via a symlink, or sensitive at the symlink's real target.
+
+    A cloned repo is untrusted content — it may contain a symlink like
+    `notes.txt -> ~/.ssh/id_rsa`. Anything whose real location falls
+    outside the project folder is invisible, and the sensitive-name check
+    runs on the real target too, so a harmless-looking link cannot smuggle
+    a secret past the filter.
+    """
+    if is_sensitive(path):
+        return True
+    try:
+        real = path.resolve()
+    except OSError:
+        return True
+    if not real.is_relative_to(project.resolve()):
+        return True
+    return real != path and is_sensitive(real)

@@ -18,7 +18,7 @@ import subprocess
 from collections import Counter
 from pathlib import Path
 
-from repiscope.privacy import is_sensitive
+from repiscope.privacy import is_off_limits
 
 CACHE_DIR = Path.home() / ".cache" / "repiscope"
 
@@ -172,7 +172,7 @@ def build_overview(project: Path, current_fingerprint: str) -> str:
 def _readme_excerpt(project: Path, max_chars: int = 1500) -> str:
     for name in ("README.md", "README.rst", "README.txt", "README"):
         f = project / name
-        if f.is_file():
+        if f.is_file() and not is_off_limits(f, project):
             try:
                 return f.read_text(encoding="utf-8", errors="replace")[:max_chars].strip()
             except OSError:
@@ -184,7 +184,7 @@ def _iter_files(project: Path):
     for path in project.rglob("*"):
         if any(part in NOISE_DIRS or part.startswith(".") for part in path.parts[len(project.parts):]):
             continue
-        if path.is_file() and not is_sensitive(path):
+        if path.is_file() and not is_off_limits(path, project):
             yield path
 
 
@@ -201,12 +201,12 @@ def _tree(project: Path, max_entries: int = 40) -> str:
     lines = []
     for entry in sorted(project.iterdir()):
         name = entry.name
-        if name.startswith(".") or name in NOISE_DIRS or is_sensitive(entry):
+        if name.startswith(".") or name in NOISE_DIRS or is_off_limits(entry, project):
             continue
         if entry.is_dir():
             lines.append(f"{name}/")
             for sub in sorted(entry.iterdir())[:6]:
-                if sub.name.startswith(".") or sub.name in NOISE_DIRS or is_sensitive(sub):
+                if sub.name.startswith(".") or sub.name in NOISE_DIRS or is_off_limits(sub, project):
                     continue
                 lines.append(f"  {sub.name}{'/' if sub.is_dir() else ''}")
         else:
