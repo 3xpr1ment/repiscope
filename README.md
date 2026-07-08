@@ -17,27 +17,35 @@ structurally *cannot* modify your repos. And the same periscope helps any
 coding agent working in project A that needs to know how a part of
 project B works.
 
+Sandboxes make this worse, not better: mine (rightly) stops the agent from
+even *reading* outside the repo it started in without asking. Widening the
+sandbox would grant write access too. Repiscope is the third way — the
+agent gets structured, read-only sight of every sibling repo through one
+MCP server, and the sandbox stays tight.
+
 ## See it in action
 
-You're working in `project-a` and your agent needs to know how you handled
-auth in another project. Instead of you copy-pasting files, the agent asks
-Repiscope directly:
+You're working in `project-a` and need to pull data from another project's
+API. Instead of you digging through that codebase, the agent asks Repiscope
+directly:
 
 ```
-You:    How did I do JWT refresh in my other API project?
+You:    Use Repiscope to find out what kind of data I can retrieve
+        from billing-api through its API.
 
 Agent:  (calls list_projects → sees "billing-api")
-        (calls search "refresh_token" project="billing-api")
-        (calls read_file "billing-api" "src/auth/tokens.py")
+        (calls project_overview "billing-api" → spots src/routes/)
+        (calls search "route" project="billing-api")
+        (calls read_file "billing-api" "src/routes/invoices.py")
 
-        In billing-api you rotate the refresh token on every use and
-        store the previous hash for a 60s grace window — here's the
-        pattern, adapted for project-a:
-        ...
+        billing-api exposes three endpoints: /invoices (list, filterable
+        by customer and date), /invoices/{id} (full invoice with line
+        items), and /customers/{id}/balance (current balance). All
+        responses are JSON; auth is a bearer token.
 ```
 
-The agent read three files in a repo it has **no ability to write to**. No
-copy-paste, no "please don't edit anything," no risk.
+The agent explored a repo it has **no ability to write to**. No copy-paste,
+no "please don't edit anything," no risk.
 
 ## Tools
 
