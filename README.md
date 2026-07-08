@@ -103,9 +103,19 @@ Optionally hide repos with `--exclude repo-a --exclude repo-b`.
 
 ## Status
 
-v1.5 — working and dogfooded daily. Four read-only tools plus borrowed-LLM
-summaries, lazy cache refresh, sensitive-file filtering. No tests yet; API
-may still change.
+v0.2.1 — working and dogfooded daily. Four read-only tools plus borrowed-LLM
+summaries, lazy cache refresh, sensitive-file filtering, and a test suite
+proving the security claims (path traversal, symlink escapes, secret
+filtering — see `tests/`). API may still change.
+
+## How this was built
+
+To be completely clear about authorship: I am not an engineer. Every
+architecture decision in Repiscope is mine — what it does, what it refuses
+to do, where the security gates live — but the coding itself is done by
+Claude (Anthropic's Fable model). My rule for the collaboration: nothing
+goes in that I don't understand. The commit history carries the
+co-authorship openly, commit by commit.
 
 ## License
 
