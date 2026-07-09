@@ -1,6 +1,6 @@
 [project]
 name = "repiscope"
-version = "0.2.1"
+version = "0.2.2"
 description = "A periscope for your repos - read-only MCP server for sibling repository context"
 readme = "README.md"
 license = "MIT"

@@ -147,7 +147,7 @@ Honesty section — what Repiscope deliberately does *not* do:
 
 ## Status
 
-v0.2.1 — working and dogfooded daily. Four read-only tools plus borrowed-LLM
+v0.2.2 — working and dogfooded daily. Four read-only tools plus borrowed-LLM
 summaries, lazy cache refresh, sensitive-file filtering, and a test suite
 proving the security claims (path traversal, symlink escapes, secret
 filtering — see `tests/`). API may still change.
@@ -164,3 +164,7 @@ co-authorship openly, commit by commit.
 ## License
 
 [MIT](LICENSE)
+
+---
+
+mcp-name: io.github.3xpr1ment/repiscope

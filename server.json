@@ -1,0 +1,40 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.3xpr1ment/repiscope",
+  "description": "Read-only MCP server: your agent sees all your sibling repos but structurally cannot touch them",
+  "repository": {
+    "url": "https://github.com/3xpr1ment/repiscope",
+    "source": "github"
+  },
+  "version": "0.2.2",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "repiscope",
+      "version": "0.2.2",
+      "runtimeHint": "uvx",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "named",
+          "name": "--root",
+          "description": "Folder containing your repos (the parent folder, not a repo itself)",
+          "isRequired": true,
+          "format": "filepath",
+          "valueHint": "~/your/projects/folder"
+        },
+        {
+          "type": "named",
+          "name": "--exclude",
+          "description": "Repo name to hide completely (repeatable)",
+          "isRequired": false,
+          "isRepeated": true,
+          "format": "string",
+          "valueHint": "repo-name"
+        }
+      ]
+    }
+  ]
+}
